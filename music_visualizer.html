@@ -587,7 +587,7 @@ function showApp() {
   document.getElementById('config-screen').classList.add('hidden');
   document.getElementById('app-screen').classList.remove('hidden');
   initParticle();
-  checkSpotifyCallback();
+  setTimeout(readCurrentSong, 2000);  // wait 2 seconds then read current song
 }
 
 // ─────────────────────────────────────────────
@@ -808,11 +808,11 @@ function initSpotifyPlayer() {
     });
 
     spotifyPlayer.addListener('ready', ({ device_id }) => {
-      deviceId = device_id;
-      showNotif('Spotify player ready');
-      // Show art container with Spotify
-      document.getElementById('art-placeholder').style.display = 'none';
-    });
+    deviceId = device_id;
+    showNotif('Spotify player ready');
+    document.getElementById('art-placeholder').style.display = 'none';
+    readCurrentSong();  // ← ADD THIS
+});
 
     spotifyPlayer.addListener('not_ready', () => {
       deviceId = null;
