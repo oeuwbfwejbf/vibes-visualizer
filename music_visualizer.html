@@ -567,12 +567,15 @@ function saveConfig() {
     return;
   }
 
-  // Save to sessionStorage (not localStorage — stays private to this tab)
   sessionStorage.setItem('vibe_device_id',  PARTICLE_DEVICE_ID);
   sessionStorage.setItem('vibe_token',      PARTICLE_TOKEN);
   sessionStorage.setItem('vibe_spotify_id', SPOTIFY_CLIENT_ID);
 
-  showApp();
+  // Only go to app, don't re-trigger Spotify auth
+  document.getElementById('config-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.remove('hidden');
+  initParticle();  // reconnect Particle only
+  // Don't call checkSpotifyCallback() here
 }
 
 function showConfig() {
