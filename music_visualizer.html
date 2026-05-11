@@ -6,453 +6,74 @@
 <title>VIBES — Music Visualizer</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Unbounded:wght@300;400;700;900&display=swap');
-
-  :root {
-    --calm:      #FD6A00;
-    --energetic: #FF00AA;
-    --dance:     #0032FF;
-    --bg:        #080808;
-    --surface:   #111111;
-    --border:    #222222;
-    --text:      #FFFFFF;
-    --muted:     #555555;
-    --accent:    #FD6A00;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    overflow-x: hidden;
-  }
-
-  /* Animated background grain */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.4;
-  }
-
-  .container {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 480px;
-    padding: 24px;
-  }
-
-  /* Header */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 32px;
-  }
-
-  .logo {
-    font-family: 'Unbounded', sans-serif;
-    font-weight: 900;
-    font-size: 24px;
-    letter-spacing: -0.02em;
-    color: var(--accent);
-  }
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: background 0.3s;
-  }
-  .status-dot.connected { background: #00FF88; box-shadow: 0 0 8px #00FF88; animation: pulse 2s infinite; }
-  .status-dot.error { background: #FF3333; }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
-  /* Mood color bar */
-  .mood-bar {
-    height: 3px;
-    width: 100%;
-    background: var(--border);
-    border-radius: 2px;
-    margin-bottom: 32px;
-    overflow: hidden;
-  }
-  .mood-bar-fill {
-    height: 100%;
-    width: 0%;
-    border-radius: 2px;
-    transition: width 0.6s ease, background 0.6s ease;
-  }
-
-  /* Album art area */
-  .art-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 24px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-  }
-
-  .art-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .art-placeholder .art-icon {
-    font-size: 64px;
-    opacity: 0.15;
-  }
-
-  .art-placeholder .art-label {
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
-
-  /* Spotify iframe */
-  #spotify-embed {
-    width: 100%;
-    height: 100%;
-    border: none;
-    display: none;
-  }
-
-  /* Mood overlay on art */
-  .mood-overlay {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    transition: opacity 0.6s ease;
-    mix-blend-mode: color;
-    pointer-events: none;
-  }
-
-  /* Song info */
-  .song-info {
-    margin-bottom: 24px;
-  }
-
-  .song-name {
-    font-family: 'Unbounded', sans-serif;
-    font-weight: 700;
-    font-size: 20px;
-    line-height: 1.2;
-    margin-bottom: 6px;
-    letter-spacing: -0.02em;
-    transition: color 0.4s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .artist-name {
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 0.05em;
-    margin-bottom: 4px;
-  }
-
-  .album-name {
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.05em;
-  }
-
-  /* Mood badge */
-  .mood-badge {
-    display: inline-block;
-    margin-top: 10px;
-    padding: 4px 10px;
-    border-radius: 2px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    background: var(--border);
-    color: var(--muted);
-    transition: background 0.4s, color 0.4s;
-  }
-
-  /* Controls */
-  .controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 24px;
-  }
-
-  .btn {
-    padding: 14px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .btn:active { transform: scale(0.97); }
-
-  .btn-primary {
-    grid-column: span 2;
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #000;
-    font-weight: 700;
-  }
-
-  .btn-primary:hover {
-    opacity: 0.85;
-    color: #000;
-    border-color: var(--accent);
-  }
-
-  /* Mood selector */
-  .mood-selector {
-    margin-bottom: 24px;
-  }
-
-  .mood-selector-label {
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-
-  .mood-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-  }
-
-  .mood-btn {
-    padding: 12px 8px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.2s;
-    text-align: center;
-  }
-
-  .mood-btn:hover { border-color: #444; color: var(--text); }
-
-  .mood-btn.active-calm {
-    border-color: var(--calm);
-    color: var(--calm);
-    background: rgba(253, 106, 0, 0.08);
-  }
-
-  .mood-btn.active-energetic {
-    border-color: var(--energetic);
-    color: var(--energetic);
-    background: rgba(255, 0, 170, 0.08);
-  }
-
-  .mood-btn.active-dance {
-    border-color: var(--dance);
-    color: var(--dance);
-    background: rgba(0, 50, 255, 0.08);
-  }
-
-  /* Device status */
-  .device-status {
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    padding: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.05em;
-  }
-
-  .device-status span { color: var(--text); }
-
-  /* Auth screen */
-  .auth-screen {
-    text-align: center;
-    padding: 40px 24px;
-  }
-
-  .auth-screen h2 {
-    font-family: 'Unbounded', sans-serif;
-    font-size: 18px;
-    margin-bottom: 12px;
-    font-weight: 700;
-  }
-
-  .auth-screen p {
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.6;
-    margin-bottom: 24px;
-  }
-
-  .auth-btn {
-    display: inline-block;
-    padding: 14px 28px;
-    background: #1DB954;
-    color: #000;
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    text-decoration: none;
-    border-radius: 2px;
-    cursor: pointer;
-    border: none;
-    transition: opacity 0.2s;
-  }
-
-  .auth-btn:hover { opacity: 0.85; }
-
-  /* Config screen */
-  .config-screen {
-    padding: 24px;
-  }
-
-  .config-screen h2 {
-    font-family: 'Unbounded', sans-serif;
-    font-size: 16px;
-    margin-bottom: 20px;
-    font-weight: 700;
-  }
-
-  .input-group {
-    margin-bottom: 16px;
-  }
-
-  .input-group label {
-    display: block;
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-
-  .input-group input {
-    width: 100%;
-    padding: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    border-radius: 2px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .input-group input:focus { border-color: var(--accent); }
-
-  .hidden { display: none !important; }
-
-  /* Notification */
-  .notif {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: 12px 20px;
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    border-radius: 2px;
-    transition: transform 0.3s ease;
-    white-space: nowrap;
-    z-index: 100;
-  }
-  .notif.show { transform: translateX(-50%) translateY(0); }
+  :root { --calm:#FD6A00; --energetic:#FF00AA; --dance:#0032FF; --bg:#080808; --surface:#111111; --border:#222222; --text:#FFFFFF; --muted:#555555; --accent:#FD6A00; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Space Mono',monospace; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:0; opacity:0.4; }
+  .container { position:relative; z-index:1; width:100%; max-width:480px; padding:24px; }
+  .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; }
+  .logo { font-family:'Unbounded',sans-serif; font-weight:900; font-size:24px; letter-spacing:-0.02em; color:var(--accent); }
+  .status-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); transition:background 0.3s; }
+  .status-dot.connected { background:#00FF88; box-shadow:0 0 8px #00FF88; animation:pulse 2s infinite; }
+  .status-dot.error { background:#FF3333; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .mood-bar { height:3px; width:100%; background:var(--border); border-radius:2px; margin-bottom:32px; overflow:hidden; }
+  .mood-bar-fill { height:100%; width:0%; border-radius:2px; transition:width 0.6s ease,background 0.6s ease; }
+  .art-container { position:relative; width:100%; aspect-ratio:1; border-radius:4px; overflow:hidden; margin-bottom:24px; background:var(--surface); border:1px solid var(--border); }
+  .art-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; }
+  .art-placeholder .art-icon { font-size:64px; opacity:0.15; }
+  .art-placeholder .art-label { font-size:11px; color:var(--muted); letter-spacing:0.15em; text-transform:uppercase; }
+  #spotify-embed { width:100%; height:100%; border:none; display:none; }
+  .mood-overlay { position:absolute; inset:0; opacity:0; transition:opacity 0.6s ease; mix-blend-mode:color; pointer-events:none; }
+  .song-info { margin-bottom:24px; }
+  .song-name { font-family:'Unbounded',sans-serif; font-weight:700; font-size:20px; line-height:1.2; margin-bottom:6px; letter-spacing:-0.02em; transition:color 0.4s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .artist-name { font-size:12px; color:var(--muted); letter-spacing:0.05em; margin-bottom:4px; }
+  .album-name { font-size:11px; color:var(--muted); letter-spacing:0.05em; }
+  .mood-badge { display:inline-block; margin-top:10px; padding:4px 10px; border-radius:2px; font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; background:var(--border); color:var(--muted); transition:background 0.4s,color 0.4s; }
+  .controls { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; }
+  .btn { padding:14px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; border-radius:2px; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .btn:hover { border-color:var(--accent); color:var(--accent); }
+  .btn:active { transform:scale(0.97); }
+  .btn-primary { grid-column:span 2; background:var(--accent); border-color:var(--accent); color:#000; font-weight:700; }
+  .btn-primary:hover { opacity:0.85; color:#000; border-color:var(--accent); }
+  .mood-selector { margin-bottom:24px; }
+  .mood-selector-label { font-size:10px; color:var(--muted); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px; }
+  .mood-buttons { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .mood-btn { padding:12px 8px; border:1px solid var(--border); background:var(--surface); color:var(--muted); font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; border-radius:2px; transition:all 0.2s; text-align:center; }
+  .mood-btn:hover { border-color:#444; color:var(--text); }
+  .mood-btn.active-calm      { border-color:var(--calm);      color:var(--calm);      background:rgba(253,106,0,0.08); }
+  .mood-btn.active-energetic { border-color:var(--energetic); color:var(--energetic); background:rgba(255,0,170,0.08); }
+  .mood-btn.active-dance     { border-color:var(--dance);     color:var(--dance);     background:rgba(0,50,255,0.08); }
+  .device-status { border:1px solid var(--border); border-radius:2px; padding:14px; display:flex; align-items:center; justify-content:space-between; font-size:11px; color:var(--muted); letter-spacing:0.05em; }
+  .device-status span { color:var(--text); }
+  .config-screen { padding:24px; }
+  .config-screen h2 { font-family:'Unbounded',sans-serif; font-size:16px; margin-bottom:20px; font-weight:700; }
+  .input-group { margin-bottom:16px; }
+  .input-group label { display:block; font-size:10px; color:var(--muted); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:6px; }
+  .input-group input { width:100%; padding:12px; background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'Space Mono',monospace; font-size:12px; border-radius:2px; outline:none; transition:border-color 0.2s; }
+  .input-group input:focus { border-color:var(--accent); }
+  .hidden { display:none !important; }
+  .notif { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--surface); border:1px solid var(--border); padding:12px 20px; font-size:11px; letter-spacing:0.05em; border-radius:2px; transition:transform 0.3s ease; white-space:nowrap; z-index:100; }
+  .notif.show { transform:translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 
-<!-- NOTIFICATION -->
 <div class="notif" id="notif"></div>
 
-<!-- CONFIG SCREEN -->
 <div class="container" id="config-screen">
   <div class="config-screen">
     <div class="logo" style="margin-bottom:28px;">VIBES</div>
     <h2>Setup</h2>
-    <p style="font-size:11px;color:#555;margin-bottom:20px;line-height:1.7;">
-      Enter your credentials to connect your device and Spotify.
-      These are saved locally in your browser only.
-    </p>
-
-    <div class="input-group">
-      <label>Particle Device ID</label>
-      <input type="text" id="input-device-id" placeholder="e.g. 3f002d000447343232363230">
-    </div>
-
-    <div class="input-group">
-      <label>Particle Access Token</label>
-      <input type="password" id="input-access-token" placeholder="Your Particle access token">
-    </div>
-
-    <div class="input-group">
-      <label>Spotify Client ID</label>
-      <input type="text" id="input-spotify-client-id" placeholder="Your Spotify app client ID">
-    </div>
-
-    <div style="margin-top:24px;">
-      <button class="btn btn-primary" onclick="saveConfig()">SAVE & CONNECT →</button>
-    </div>
+    <p style="font-size:11px;color:#555;margin-bottom:20px;line-height:1.7;">Enter your credentials to connect your device and Spotify. These are saved locally in your browser only.</p>
+    <div class="input-group"><label>Particle Device ID</label><input type="text" id="input-device-id" placeholder="e.g. 3f002d000447343232363230"></div>
+    <div class="input-group"><label>Particle Access Token</label><input type="password" id="input-access-token" placeholder="Your Particle access token"></div>
+    <div class="input-group"><label>Spotify Client ID</label><input type="text" id="input-spotify-client-id" placeholder="Your Spotify app client ID"></div>
+    <div style="margin-top:24px;"><button class="btn btn-primary" onclick="saveConfig()">SAVE & CONNECT →</button></div>
   </div>
 </div>
 
-<!-- MAIN APP SCREEN -->
 <div class="container hidden" id="app-screen">
-
-  <!-- Header -->
   <div class="header">
     <div class="logo">VIBES</div>
     <div style="display:flex;align-items:center;gap:10px;">
@@ -460,13 +81,7 @@
       <div class="status-dot" id="status-dot"></div>
     </div>
   </div>
-
-  <!-- Mood bar -->
-  <div class="mood-bar">
-    <div class="mood-bar-fill" id="mood-bar-fill"></div>
-  </div>
-
-  <!-- Album art / Spotify embed -->
+  <div class="mood-bar"><div class="mood-bar-fill" id="mood-bar-fill"></div></div>
   <div class="art-container" id="art-container">
     <div class="art-placeholder" id="art-placeholder">
       <div class="art-icon">♫</div>
@@ -475,25 +90,17 @@
     <iframe id="spotify-embed" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
     <div class="mood-overlay" id="mood-overlay"></div>
   </div>
-
-  <!-- Song info -->
   <div class="song-info">
     <div class="song-name" id="song-name">—</div>
     <div class="artist-name" id="artist-name">—</div>
     <div class="album-name" id="album-name">—</div>
     <div class="mood-badge" id="mood-badge">NO SIGNAL</div>
   </div>
-
-  <!-- Controls -->
   <div class="controls">
     <button class="btn" onclick="skipBack()">← PREV</button>
     <button class="btn" onclick="skipForward()">NEXT →</button>
-    <button class="btn btn-primary" id="spotify-auth-btn" onclick="connectSpotify()">
-      CONNECT SPOTIFY
-    </button>
+    <button class="btn btn-primary" id="spotify-auth-btn" onclick="connectSpotify()">CONNECT SPOTIFY</button>
   </div>
-
-  <!-- Mood selector -->
   <div class="mood-selector">
     <div class="mood-selector-label">Select Mood</div>
     <div class="mood-buttons">
@@ -502,80 +109,63 @@
       <button class="mood-btn" id="btn-dance"     onclick="selectMood(2)">Dance</button>
     </div>
   </div>
-
-  <!-- Device status -->
   <div class="device-status">
     <span style="color:var(--muted);">PHOTON 2</span>
     <span id="device-song-display">—</span>
     <button onclick="showConfig()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;font-family:'Space Mono',monospace;">⚙</button>
   </div>
-
 </div>
 
 <script>
-// ─────────────────────────────────────────────
-//  CONFIG
-// ─────────────────────────────────────────────
 let PARTICLE_DEVICE_ID  = '';
 let PARTICLE_TOKEN      = '';
 let SPOTIFY_CLIENT_ID   = '';
 const SPOTIFY_REDIRECT  = window.location.origin + window.location.pathname;
 const SPOTIFY_SCOPES    = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state';
-
 let spotifyToken        = null;
 let spotifyPlayer       = null;
 let deviceId            = null;
-let currentSongData     = { name: '—', artist: '—', album: '—', mood: -1 };
 let particleEventSource = null;
+let currentSongIndex    = 0;
 
-// Song data matching your Photon 2 code
 const SONGS = [
-  { name: "Best to You",          artist: "Blood Orange",      album: "Freetown Sound",      mood: 0 },
-  { name: "Augustine",            artist: "Blood Orange",      album: "Freetown Sound",      mood: 0 },
-  { name: "Hadron Collider",      artist: "Blood Orange",      album: "Freetown Sound",      mood: 0 },
-  { name: "I'm God",              artist: "Clams Casino",      album: "Instrumental Relics", mood: 0 },
-  { name: "All I Need",           artist: "Clams Casino",      album: "Instrumental Relics", mood: 0 },
-  { name: "Numb",                 artist: "Clams Casino",      album: "Instrumental Relics", mood: 0 },
-  { name: "Diamonds",             artist: "Rihanna",           album: "Unapologetic",        mood: 1 },
-  { name: "Stay",                 artist: "Rihanna",           album: "Unapologetic",        mood: 1 },
-  { name: "Pour It Up",           artist: "Rihanna",           album: "Unapologetic",        mood: 1 },
-  { name: "WGFT",                 artist: "Gunna",             album: "The Last Wun",        mood: 1 },
-  { name: "Just Say Dat",         artist: "Gunna",             album: "The Last Wun",        mood: 1 },
-  { name: "Forever Be Mine",      artist: "Gunna",             album: "The Last Wun",        mood: 1 },
-  { name: "Moth to a Flame",      artist: "Swedish House Mafia", album: "Paradise Again",    mood: 2 },
-  { name: "Lifetime",             artist: "Swedish House Mafia", album: "Paradise Again",    mood: 2 },
-  { name: "It Gets Better",       artist: "Swedish House Mafia", album: "Paradise Again",    mood: 2 },
-  { name: "I'm Not Alone",        artist: "Calvin Harris",     album: "Ready for the Weekend", mood: 2 },
-  { name: "Ready for the Weekend",artist: "Calvin Harris",     album: "Ready for the Weekend", mood: 2 },
-  { name: "Flashback",            artist: "Calvin Harris",     album: "Ready for the Weekend", mood: 2 },
+  {name:"Best to You",          artist:"Blood Orange",       album:"Freetown Sound",        mood:0},
+  {name:"Augustine",            artist:"Blood Orange",       album:"Freetown Sound",        mood:0},
+  {name:"Hadron Collider",      artist:"Blood Orange",       album:"Freetown Sound",        mood:0},
+  {name:"I'm God",              artist:"Clams Casino",       album:"Instrumental Relics",   mood:0},
+  {name:"All I Need",           artist:"Clams Casino",       album:"Instrumental Relics",   mood:0},
+  {name:"Numb",                 artist:"Clams Casino",       album:"Instrumental Relics",   mood:0},
+  {name:"Diamonds",             artist:"Rihanna",            album:"Unapologetic",          mood:1},
+  {name:"Stay",                 artist:"Rihanna",            album:"Unapologetic",          mood:1},
+  {name:"Pour It Up",           artist:"Rihanna",            album:"Unapologetic",          mood:1},
+  {name:"WGFT",                 artist:"Gunna",              album:"The Last Wun",          mood:1},
+  {name:"Just Say Dat",         artist:"Gunna",              album:"The Last Wun",          mood:1},
+  {name:"Forever Be Mine",      artist:"Gunna",              album:"The Last Wun",          mood:1},
+  {name:"Moth to a Flame",      artist:"Swedish House Mafia",album:"Paradise Again",        mood:2},
+  {name:"Lifetime",             artist:"Swedish House Mafia",album:"Paradise Again",        mood:2},
+  {name:"It Gets Better",       artist:"Swedish House Mafia",album:"Paradise Again",        mood:2},
+  {name:"I'm Not Alone",        artist:"Calvin Harris",      album:"Ready for the Weekend", mood:2},
+  {name:"Ready for the Weekend",artist:"Calvin Harris",      album:"Ready for the Weekend", mood:2},
+  {name:"Flashback",            artist:"Calvin Harris",      album:"Ready for the Weekend", mood:2},
 ];
 
-const MOOD_NAMES   = ['CALM', 'ENERGETIC', 'DANCE'];
-const MOOD_COLORS  = ['#FD6A00', '#FF00AA', '#0032FF'];
-const MOOD_CLASSES = ['active-calm', 'active-energetic', 'active-dance'];
+const MOOD_NAMES   = ['CALM','ENERGETIC','DANCE'];
+const MOOD_COLORS  = ['#FD6A00','#FF00AA','#0032FF'];
+const MOOD_CLASSES = ['active-calm','active-energetic','active-dance'];
 
-// ─────────────────────────────────────────────
-//  CONFIG SCREEN
-// ─────────────────────────────────────────────
+// CONFIG
 function saveConfig() {
   PARTICLE_DEVICE_ID = document.getElementById('input-device-id').value.trim();
   PARTICLE_TOKEN     = document.getElementById('input-access-token').value.trim();
   SPOTIFY_CLIENT_ID  = document.getElementById('input-spotify-client-id').value.trim();
-
-  if (!PARTICLE_DEVICE_ID || !PARTICLE_TOKEN || !SPOTIFY_CLIENT_ID) {
-    showNotif('Please fill in all fields');
-    return;
-  }
-
+  if (!PARTICLE_DEVICE_ID || !PARTICLE_TOKEN || !SPOTIFY_CLIENT_ID) { showNotif('Please fill in all fields'); return; }
   sessionStorage.setItem('vibe_device_id',  PARTICLE_DEVICE_ID);
   sessionStorage.setItem('vibe_token',      PARTICLE_TOKEN);
   sessionStorage.setItem('vibe_spotify_id', SPOTIFY_CLIENT_ID);
-
-  // Only go to app, don't re-trigger Spotify auth
   document.getElementById('config-screen').classList.add('hidden');
   document.getElementById('app-screen').classList.remove('hidden');
-  initParticle();  // reconnect Particle only
-  // Don't call checkSpotifyCallback() here
+  initParticle();
+  setTimeout(readCurrentSong, 2000);
 }
 
 function showConfig() {
@@ -587,69 +177,49 @@ function showApp() {
   document.getElementById('config-screen').classList.add('hidden');
   document.getElementById('app-screen').classList.remove('hidden');
   initParticle();
-  setTimeout(readCurrentSong, 2000);  // wait 2 seconds then read current song
+  setTimeout(readCurrentSong, 2000);
 }
 
-// ─────────────────────────────────────────────
-//  PARTICLE SSE — listen for song_changed events
-// ─────────────────────────────────────────────
+// READ CURRENT SONG from Particle Variable
+async function readCurrentSong() {
+  if (!PARTICLE_DEVICE_ID || !PARTICLE_TOKEN) return;
+  try {
+    const res  = await fetch(`https://api.particle.io/v1/devices/${PARTICLE_DEVICE_ID}/currentSong`, {
+      headers: {'Authorization': `Bearer ${PARTICLE_TOKEN}`}
+    });
+    const data = await res.json();
+    if (data.result) {
+      const parts = data.result.split('|');
+      const song  = SONGS.find(s => s.name === parts[0]);
+      if (song) {
+        updateSongDisplay(song);
+        if (spotifyToken && deviceId) searchAndPlay(song.name, song.artist);
+      }
+    }
+  } catch(e) { console.log('readCurrentSong error:', e); }
+}
+
+// PARTICLE SSE
 function initParticle() {
   if (particleEventSource) particleEventSource.close();
-
-  const url = `https://api.particle.io/v1/devices/${PARTICLE_DEVICE_ID}/events/song_changed`;
-  particleEventSource = new EventSource(url + `?access_token=${PARTICLE_TOKEN}`);
-
-  particleEventSource.onopen = () => {
-    setStatus('connected', 'DEVICE ONLINE');
-  };
-
+  const url = `https://api.particle.io/v1/devices/${PARTICLE_DEVICE_ID}/events/song_changed?access_token=${PARTICLE_TOKEN}`;
+  particleEventSource = new EventSource(url);
+  particleEventSource.onopen = () => setStatus('connected', 'DEVICE ONLINE');
   particleEventSource.addEventListener('song_changed', (e) => {
-    const payload = JSON.parse(e.data);
-    const parts   = payload.data.split('|');
-    const songName   = parts[0];
-    const artistName = parts[1] || '';
-
-    const song = SONGS.find(s => s.name === songName);
-    if (song) {
-      updateSongDisplay(song);
-      if (spotifyToken && deviceId) searchAndPlay(song.name, song.artist);
-    }
+    try {
+      const payload = JSON.parse(e.data);
+      const parts   = payload.data.split('|');
+      const song    = SONGS.find(s => s.name === parts[0]);
+      if (song) {
+        updateSongDisplay(song);
+        if (spotifyToken && deviceId) searchAndPlay(song.name, song.artist);
+      }
+    } catch(err) { console.log('Event parse error:', err); }
   });
-
-  particleEventSource.onerror = () => {
-    setStatus('error', 'DEVICE OFFLINE');
-  };
+  particleEventSource.onerror = () => setStatus('error', 'DEVICE OFFLINE');
 }
 
-  particleEventSource.onerror = () => {
-    setStatus('error', 'DEVICE OFFLINE');
-  };
-}
-
-// ─────────────────────────────────────────────
-//  PARTICLE API — send commands to Photon 2
-// ─────────────────────────────────────────────
-async function callParticleFunction(funcName, arg) {
-  try {
-    const res = await fetch(`https://api.particle.io/v1/devices/${PARTICLE_DEVICE_ID}/${funcName}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${PARTICLE_TOKEN}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `arg=${arg}`
-    });
-    return await res.json();
-  } catch (e) {
-    showNotif('Could not reach device');
-  }
-}
-
-// Skip forward — triggers V0 in Blynk equivalent via Particle variable
-// Since we use Blynk for hardware control, these buttons update the display
-// and play on Spotify. The pot/Blynk still control the hardware.
-let currentSongIndex = 0;
-
+// CONTROLS
 function skipForward() {
   currentSongIndex = (currentSongIndex + 1) % SONGS.length;
   const song = SONGS[currentSongIndex];
@@ -674,75 +244,49 @@ function selectMood(moodIndex) {
   showNotif('Mood → ' + MOOD_NAMES[moodIndex]);
 }
 
-// ─────────────────────────────────────────────
-//  UI UPDATE
-// ─────────────────────────────────────────────
+// UI UPDATE
 function updateSongDisplay(song) {
-  currentSongData = song;
   currentSongIndex = SONGS.indexOf(song);
-
-  document.getElementById('song-name').textContent   = song.name;
-  document.getElementById('artist-name').textContent = song.artist;
-  document.getElementById('album-name').textContent  = song.album;
+  document.getElementById('song-name').textContent           = song.name;
+  document.getElementById('artist-name').textContent         = song.artist;
+  document.getElementById('album-name').textContent          = song.album;
   document.getElementById('device-song-display').textContent = song.name;
-
   const mood  = song.mood;
   const color = MOOD_COLORS[mood];
-
-  // Mood badge
   const badge = document.getElementById('mood-badge');
-  badge.textContent = MOOD_NAMES[mood];
-  badge.style.background = color + '22';
+  badge.textContent       = MOOD_NAMES[mood];
+  badge.style.background  = color + '22';
   badge.style.color       = color;
   badge.style.borderColor = color + '44';
-
-  // Mood bar
   const fill = document.getElementById('mood-bar-fill');
   fill.style.background = color;
-  fill.style.width = ((currentSongIndex + 1) / SONGS.length * 100) + '%';
-
-  // Mood overlay on art
+  fill.style.width      = ((currentSongIndex + 1) / SONGS.length * 100) + '%';
   const overlay = document.getElementById('mood-overlay');
   overlay.style.background = color;
   overlay.style.opacity    = '0.15';
-
-  // Song name color
   document.getElementById('song-name').style.color = color;
-
-  // Mood buttons
-  ['btn-calm', 'btn-energetic', 'btn-dance'].forEach((id, i) => {
+  ['btn-calm','btn-energetic','btn-dance'].forEach((id, i) => {
     const btn = document.getElementById(id);
     btn.className = 'mood-btn';
     if (i === mood) btn.classList.add(MOOD_CLASSES[i]);
   });
-
-  // CSS accent color
   document.documentElement.style.setProperty('--accent', color);
 }
 
 function setStatus(state, text) {
-  const dot  = document.getElementById('status-dot');
-  const label = document.getElementById('status-text');
-  dot.className  = 'status-dot ' + state;
-  label.textContent = text;
+  document.getElementById('status-dot').className    = 'status-dot ' + state;
+  document.getElementById('status-text').textContent = text;
 }
 
-// ─────────────────────────────────────────────
-//  SPOTIFY AUTH (PKCE flow — no backend needed)
-// ─────────────────────────────────────────────
+// SPOTIFY AUTH
 function connectSpotify() {
   const verifier  = generateCodeVerifier(128);
   const challenge = generateCodeChallenge(verifier);
   sessionStorage.setItem('spotify_verifier', verifier);
-
   challenge.then(ch => {
     const params = new URLSearchParams({
-      client_id:             SPOTIFY_CLIENT_ID,
-      response_type:         'code',
-      redirect_uri:          SPOTIFY_REDIRECT,
-      code_challenge_method: 'S256',
-      code_challenge:        ch,
-      scope:                 SPOTIFY_SCOPES,
+      client_id: SPOTIFY_CLIENT_ID, response_type:'code', redirect_uri:SPOTIFY_REDIRECT,
+      code_challenge_method:'S256', code_challenge:ch, scope:SPOTIFY_SCOPES,
     });
     window.location = 'https://accounts.spotify.com/authorize?' + params;
   });
@@ -758,37 +302,30 @@ function generateCodeVerifier(length) {
 }
 
 async function generateCodeChallenge(verifier) {
-  const data    = new TextEncoder().encode(verifier);
-  const digest  = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const data   = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
 
 async function checkSpotifyCallback() {
   const params   = new URLSearchParams(window.location.search);
   const code     = params.get('code');
   const verifier = sessionStorage.getItem('spotify_verifier');
-
   if (code && verifier) {
-    // Exchange code for token
     window.history.replaceState({}, '', window.location.pathname);
     const res = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
       body: new URLSearchParams({
-        client_id:     SPOTIFY_CLIENT_ID,
-        grant_type:    'authorization_code',
-        code:          code,
-        redirect_uri:  SPOTIFY_REDIRECT,
-        code_verifier: verifier,
+        client_id:SPOTIFY_CLIENT_ID, grant_type:'authorization_code',
+        code:code, redirect_uri:SPOTIFY_REDIRECT, code_verifier:verifier,
       })
     });
-
     const data = await res.json();
     if (data.access_token) {
       spotifyToken = data.access_token;
       sessionStorage.removeItem('spotify_verifier');
-      document.getElementById('spotify-auth-btn').textContent = '✓ SPOTIFY CONNECTED';
+      document.getElementById('spotify-auth-btn').textContent      = '✓ SPOTIFY CONNECTED';
       document.getElementById('spotify-auth-btn').style.background = '#1DB954';
       initSpotifyPlayer();
       showNotif('Spotify connected!');
@@ -796,89 +333,57 @@ async function checkSpotifyCallback() {
   }
 }
 
-// ─────────────────────────────────────────────
-//  SPOTIFY WEB PLAYBACK SDK
-// ─────────────────────────────────────────────
+// SPOTIFY PLAYER
 function initSpotifyPlayer() {
-  const script  = document.createElement('script');
-  script.src    = 'https://sdk.scdn.co/spotify-player.js';
+  const script = document.createElement('script');
+  script.src   = 'https://sdk.scdn.co/spotify-player.js';
   document.body.appendChild(script);
-
   window.onSpotifyWebPlaybackSDKReady = () => {
     spotifyPlayer = new Spotify.Player({
-      name:       'VIBES Music Visualizer',
+      name:'VIBES Music Visualizer',
       getOAuthToken: cb => cb(spotifyToken),
-      volume:     0.7
+      volume:0.7
     });
-
-    spotifyPlayer.addListener('ready', ({ device_id }) => {
-    deviceId = device_id;
-    showNotif('Spotify player ready');
-    document.getElementById('art-placeholder').style.display = 'none';
-    readCurrentSong();  // ← ADD THIS
-});
-
-    spotifyPlayer.addListener('not_ready', () => {
-      deviceId = null;
+    spotifyPlayer.addListener('ready', ({device_id}) => {
+      deviceId = device_id;
+      showNotif('Spotify player ready');
+      document.getElementById('art-placeholder').style.display = 'none';
+      readCurrentSong();
     });
-
+    spotifyPlayer.addListener('not_ready', () => { deviceId = null; });
     spotifyPlayer.connect();
   };
 }
 
 async function searchAndPlay(songName, artistName) {
   if (!spotifyToken || !deviceId) return;
-
   try {
-    // Search Spotify for the track
-    const query = encodeURIComponent(`track:${songName} artist:${artistName}`);
-    const searchRes = await fetch(`https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`, {
-      headers: { 'Authorization': `Bearer ${spotifyToken}` }
+    const query      = encodeURIComponent(`track:${songName} artist:${artistName}`);
+    const searchRes  = await fetch(`https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`, {
+      headers:{'Authorization':`Bearer ${spotifyToken}`}
     });
     const searchData = await searchRes.json();
-    const track = searchData.tracks?.items?.[0];
-
-    if (!track) {
-      showNotif('Song not found on Spotify');
-      return;
-    }
-
-    // Transfer playback to our player
+    const track      = searchData.tracks?.items?.[0];
+    if (!track) { showNotif('Song not found on Spotify'); return; }
     await fetch(`https://api.spotify.com/v1/me/player`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${spotifyToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ device_ids: [deviceId], play: false })
+      method:'PUT',
+      headers:{'Authorization':`Bearer ${spotifyToken}`,'Content-Type':'application/json'},
+      body: JSON.stringify({device_ids:[deviceId], play:false})
     });
-
-    // Play the track
     await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${spotifyToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ uris: [track.uri] })
+      method:'PUT',
+      headers:{'Authorization':`Bearer ${spotifyToken}`,'Content-Type':'application/json'},
+      body: JSON.stringify({uris:[track.uri]})
     });
-
-    // Show Spotify embed for album art
-    const embedSrc = `https://open.spotify.com/embed/track/${track.id}?utm_source=generator&theme=0`;
     const embed = document.getElementById('spotify-embed');
-    embed.src = embedSrc;
+    embed.src           = `https://open.spotify.com/embed/track/${track.id}?utm_source=generator&theme=0`;
     embed.style.display = 'block';
     document.getElementById('art-placeholder').style.display = 'none';
-
     showNotif('Playing: ' + track.name);
-  } catch (e) {
-    showNotif('Spotify error — try reconnecting');
-  }
+  } catch(e) { showNotif('Spotify error — try reconnecting'); }
 }
 
-// ─────────────────────────────────────────────
-//  NOTIFICATION
-// ─────────────────────────────────────────────
+// NOTIFICATION
 let notifTimer = null;
 function showNotif(msg) {
   const el = document.getElementById('notif');
@@ -888,13 +393,14 @@ function showNotif(msg) {
   notifTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-// ─────────────────────────────────────────────
-//  INIT — load saved config if exists
-// ─────────────────────────────────────────────
+// INIT
 window.addEventListener('load', () => {
   const savedDeviceId  = sessionStorage.getItem('vibe_device_id');
   const savedToken     = sessionStorage.getItem('vibe_token');
   const savedSpotifyId = sessionStorage.getItem('vibe_spotify_id');
+
+  if (savedDeviceId)  document.getElementById('input-device-id').value          = savedDeviceId;
+  if (savedSpotifyId) document.getElementById('input-spotify-client-id').value  = savedSpotifyId;
 
   if (savedDeviceId && savedToken && savedSpotifyId) {
     PARTICLE_DEVICE_ID = savedDeviceId;
@@ -903,9 +409,15 @@ window.addEventListener('load', () => {
     showApp();
   }
 
-  // Pre-fill inputs if returning to config
-  if (savedDeviceId) document.getElementById('input-device-id').value  = savedDeviceId;
-  if (savedSpotifyId) document.getElementById('input-spotify-client-id').value = savedSpotifyId;
+  // Handle Spotify callback
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('code') && sessionStorage.getItem('spotify_verifier')) {
+    SPOTIFY_CLIENT_ID  = sessionStorage.getItem('vibe_spotify_id');
+    PARTICLE_DEVICE_ID = sessionStorage.getItem('vibe_device_id');
+    PARTICLE_TOKEN     = sessionStorage.getItem('vibe_token');
+    showApp();
+    checkSpotifyCallback();
+  }
 });
 </script>
 </body>
