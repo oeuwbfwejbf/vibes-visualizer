@@ -596,8 +596,8 @@ function showApp() {
 function initParticle() {
   if (particleEventSource) particleEventSource.close();
 
-  const url = `https://api.particle.io/v1/devices/${PARTICLE_DEVICE_ID}/events/song_changed?access_token=${PARTICLE_TOKEN}`;
-  particleEventSource = new EventSource(url);
+  const url = `https://api.particle.io/v1/devices/${PARTICLE_DEVICE_ID}/events/song_changed`;
+  particleEventSource = new EventSource(url + `?access_token=${PARTICLE_TOKEN}`);
 
   particleEventSource.onopen = () => {
     setStatus('connected', 'DEVICE ONLINE');
@@ -609,13 +609,17 @@ function initParticle() {
     const songName   = parts[0];
     const artistName = parts[1] || '';
 
-    // Find song in our list
     const song = SONGS.find(s => s.name === songName);
     if (song) {
       updateSongDisplay(song);
       if (spotifyToken && deviceId) searchAndPlay(song.name, song.artist);
     }
   });
+
+  particleEventSource.onerror = () => {
+    setStatus('error', 'DEVICE OFFLINE');
+  };
+}
 
   particleEventSource.onerror = () => {
     setStatus('error', 'DEVICE OFFLINE');
